@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Morse Trainer</title>
 <style>
 :root {
@@ -24,6 +24,7 @@ html, body {
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
   overscroll-behavior: none;
+  touch-action: manipulation;
 }
 body {
   display: flex;
@@ -214,6 +215,7 @@ body {
   font-weight: 900; font-size: 1.6rem;
   display: flex; align-items: center; justify-content: center;
   transition: transform .08s, opacity .08s;
+  touch-action: manipulation;
   user-select: none; -webkit-user-select: none;
   padding: 0;
 }
@@ -286,6 +288,10 @@ select {
   margin-top: 8px; background: var(--accent); color: #0d1117;
   border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
   padding: 14px 36px; cursor: pointer;
+}
+
+button, .ref-cell {
+  touch-action: manipulation;
 }
 </style>
 </head>
@@ -766,6 +772,15 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ') { e.preventDefault(); skipChar(); }
   if (e.key === 'Enter') startDrill();
 });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+
+document.addEventListener('dblclick', e => e.preventDefault());
 
 // ─────────────────────────────────────────
 // INIT
