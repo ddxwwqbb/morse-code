@@ -215,7 +215,7 @@ body {
   font-weight: 900; font-size: 1.6rem;
   display: flex; align-items: center; justify-content: center;
   transition: transform .08s, opacity .08s;
-  touch-action: manipulation;
+  touch-action: none;
   user-select: none; -webkit-user-select: none;
   padding: 0;
 }
@@ -383,10 +383,10 @@ button, .ref-cell {
 
     <!-- Big dot / dash buttons -->
     <div class="morse-btns" id="morse-btns">
-      <button class="morse-input-btn btn-dot" onclick="inputSymbol('.')" id="btn-dot" disabled>
+      <button class="morse-input-btn btn-dot" onpointerdown="pressSymbol(event, '.')" id="btn-dot" disabled>
         <div class="dot-shape"></div>
       </button>
-      <button class="morse-input-btn btn-dash" onclick="inputSymbol('-')" id="btn-dash" disabled>
+      <button class="morse-input-btn btn-dash" onpointerdown="pressSymbol(event, '-')" id="btn-dash" disabled>
         <div class="dash-shape"></div>
       </button>
     </div>
@@ -693,6 +693,11 @@ function inputSymbol(s) {
   checkInput();
 }
 
+function pressSymbol(e, s) {
+  e.preventDefault();
+  inputSymbol(s);
+}
+
 function deleteLast() {
   if (!drillActive || drillWaiting || !drillInput) return;
   drillInput = drillInput.slice(0, -1);
@@ -772,15 +777,6 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ') { e.preventDefault(); skipChar(); }
   if (e.key === 'Enter') startDrill();
 });
-
-let lastTouchEnd = 0;
-document.addEventListener('touchend', e => {
-  const now = Date.now();
-  if (now - lastTouchEnd < 300) e.preventDefault();
-  lastTouchEnd = now;
-}, { passive: false });
-
-document.addEventListener('dblclick', e => e.preventDefault());
 
 // ─────────────────────────────────────────
 // INIT
