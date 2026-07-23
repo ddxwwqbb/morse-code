@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Morse Trainer</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #e3b341;
+  --text: #c9d1d9;
+  --muted: #8b949e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100%;
+  padding: 16px 12px 24px;
+}
+
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 16px; }
+.header h1 {
+  font-size: 1.2rem; letter-spacing: .2em;
+  color: var(--accent); text-transform: uppercase;
+}
+.header p { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+/* ── Mode switcher ── */
+.mode-switch {
+  display: flex; width: 100%; max-width: 400px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 4px; margin-bottom: 16px; gap: 4px;
+}
+.mode-btn {
+  flex: 1; padding: 10px 0; border: none; border-radius: 7px;
+  font-size: .9rem; font-weight: 600; cursor: pointer;
+  transition: all .15s; background: transparent; color: var(--muted);
+}
+.mode-btn.active { background: var(--surface2); color: var(--text); }
+.mode-btn:hover:not(.active) { color: var(--text); }
+
+/* ── Panels ── */
+.panel { display: none; width: 100%; max-width: 420px; flex-direction: column; gap: 12px; }
+.panel.active { display: flex; }
+
+/* ══════════════════════════════════
+   LEARN PANEL
+══════════════════════════════════ */
+.learn-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.learn-nav {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+}
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s; flex-shrink: 0;
+}
+.nav-btn:hover { border-color: var(--accent); }
+.learn-progress {
+  flex: 1; font-size: .75rem; color: var(--muted); text-align: center;
+}
+.learn-char {
+  font-size: 5.5rem; font-weight: 700; color: var(--text);
+  line-height: 1; margin-bottom: 8px; letter-spacing: .05em;
+}
+.learn-morse-text {
+  font-family: monospace; font-size: 2rem; letter-spacing: .2em;
+  color: var(--accent); margin-bottom: 14px; min-height: 44px;
+}
+.learn-morse-visual {
+  display: flex; gap: 6px; align-items: center; justify-content: center;
+  margin-bottom: 16px; min-height: 28px;
+}
+.sym-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  transition: opacity .1s;
+}
+.sym-dash {
+  width: 38px; height: 14px; border-radius: 7px;
+  background: var(--accent); flex-shrink: 0;
+  transition: opacity .1s;
+}
+.sym-dot.lit, .sym-dash.lit { background: #fff; box-shadow: 0 0 10px var(--accent); }
+
+.play-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 24px; border-radius: 8px;
+  background: var(--accent); color: #0d1117;
+  border: none; font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: opacity .15s;
+}
+.play-btn:hover { opacity: .85; }
+.play-btn:active { opacity: .7; }
+
+/* Reference grid */
+.ref-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.ref-header span { font-size: .8rem; color: var(--muted); }
+.filter-btns { display: flex; gap: 4px; }
+.filter-btn {
+  padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted); font-size: .75rem;
+  cursor: pointer; transition: all .1s;
+}
+.filter-btn.on { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+
+.ref-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px;
+}
+.ref-cell {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 6px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: border-color .12s, background .12s; user-select: none;
+}
+.ref-cell:hover, .ref-cell:active { border-color: var(--accent); background: #1c2333; }
+.ref-cell .rc { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+.ref-cell .rm { font-family: monospace; font-size: .75rem; color: var(--accent); letter-spacing: .1em; }
+
+/* ══════════════════════════════════
+   DRILL PANEL
+══════════════════════════════════ */
+.drill-top {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.drill-stats {
+  display: flex; gap: 16px; flex: 1;
+}
+.stat { text-align: center; }
+.stat-val { font-size: 1.4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.stat-lbl { font-size: .65rem; color: var(--muted); text-transform: uppercase; margin-top: 1px; }
+
+/* Ring timer */
+.ring { position: relative; width: 58px; height: 58px; flex-shrink: 0; }
+.ring svg { transform: rotate(-90deg); }
+.ring-bg  { fill: none; stroke: var(--surface2); stroke-width: 5; }
+.ring-arc { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round;
+            stroke-dasharray: 163; stroke-dashoffset: 0; transition: stroke-dashoffset .3s; }
+.ring-txt {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; font-weight: 700;
+}
+
+/* Main drill card */
+.drill-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.drill-char {
+  font-size: 6rem; font-weight: 700; color: var(--text);
+  line-height: 1; transition: color .15s;
+}
+.drill-char.ok   { color: var(--green); }
+.drill-char.bad  { color: var(--red); }
+
+/* Input display bar */
+.input-display {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 48px; gap: 6px; flex-wrap: wrap;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; width: 100%; padding: 8px 12px;
+  transition: border-color .15s;
+}
+.input-display.ok  { border-color: var(--green); }
+.input-display.bad { border-color: var(--red); }
+.inp-dot  { width: 12px; height: 12px; border-radius: 50%; background: var(--text); flex-shrink: 0; }
+.inp-dash { width: 32px; height: 12px; border-radius: 6px; background: var(--text); flex-shrink: 0; }
+.inp-placeholder { color: var(--muted); font-size: .85rem; }
+
+.drill-feedback {
+  font-size: .85rem; min-height: 20px; text-align: center; color: var(--muted);
+  transition: color .15s;
+}
+.drill-feedback.ok  { color: var(--green); }
+.drill-feedback.bad { color: var(--red); }
+
+/* ── Big dot/dash buttons ── */
+.morse-btns {
+  display: grid; grid-template-columns: 1fr 2fr; gap: 10px; width: 100%;
+}
+.morse-input-btn {
+  border: none; border-radius: 12px; cursor: pointer;
+  font-weight: 900; font-size: 1.6rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .08s, opacity .08s;
+  user-select: none; -webkit-user-select: none;
+  padding: 0;
+}
+.morse-input-btn:active { transform: scale(.93); opacity: .8; }
+.btn-dot {
+  background: var(--surface2); color: var(--text);
+  border: 2px solid var(--border);
+  height: 80px;
+}
+.btn-dot:hover { border-color: var(--accent); }
+.btn-dash {
+  background: var(--surface2); color: var(--text);
+  border: 2px solid var(--border);
+  height: 80px;
+}
+.btn-dash:hover { border-color: var(--accent); }
+
+/* symbol shapes on buttons */
+.dot-shape { width: 16px; height: 16px; border-radius: 50%; background: currentColor; }
+.dash-shape { width: 44px; height: 16px; border-radius: 8px; background: currentColor; }
+
+/* ── Action row ── */
+.action-row { display: flex; gap: 8px; width: 100%; }
+.btn-del {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 10px; font-size: 1.2rem;
+  padding: 12px; cursor: pointer; transition: border-color .12s;
+  flex: 1; display: flex; align-items: center; justify-content: center;
+}
+.btn-del:hover { border-color: var(--yellow); }
+.btn-skip {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); border-radius: 10px; font-size: .85rem; font-weight: 600;
+  padding: 12px 18px; cursor: pointer; transition: border-color .12s;
+}
+.btn-skip:hover { border-color: var(--muted); color: var(--text); }
+.btn-start {
+  flex: 2; background: var(--accent); color: #0d1117;
+  border: none; border-radius: 10px; font-size: .95rem; font-weight: 700;
+  padding: 14px; cursor: pointer; transition: opacity .12s;
+}
+.btn-start:hover { opacity: .85; }
+
+/* ── Settings row ── */
+.settings-row {
+  display: flex; gap: 8px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; flex-wrap: wrap;
+}
+.settings-row label { font-size: .78rem; color: var(--muted); }
+select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 8px; border-radius: 6px;
+  font-size: .8rem; cursor: pointer;
+}
+
+/* ── Overlay ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(13,17,23,.92); backdrop-filter: blur(6px);
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; z-index: 20;
+}
+.overlay.show { display: flex; }
+.ov-emoji { font-size: 3rem; }
+.ov-title { font-size: 1.5rem; color: var(--accent); font-weight: 700; }
+.ov-pct   { font-size: 4rem; font-weight: 900; color: var(--green); }
+.ov-detail { color: var(--muted); font-size: .9rem; }
+.btn-again {
+  margin-top: 8px; background: var(--accent); color: #0d1117;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+  padding: 14px 36px; cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⠿ Morse Trainer</h1>
+  <p>Tap · and — to enter morse code</p>
+</div>
+
+<!-- Mode switch -->
+<div class="mode-switch">
+  <button class="mode-btn active" id="btn-learn" onclick="setMode('learn')">📖 Learn</button>
+  <button class="mode-btn" id="btn-drill" onclick="setMode('drill')">⚡ Drill</button>
+</div>
+
+<!-- ════════ LEARN PANEL ════════ -->
+<div class="panel active" id="panel-learn">
+
+  <!-- Character browser -->
+  <div class="learn-card">
+    <div class="learn-nav">
+      <button class="nav-btn" onclick="learnPrev()">‹</button>
+      <div class="learn-progress" id="l-prog">1 / 36</div>
+      <button class="nav-btn" onclick="learnNext()">›</button>
+    </div>
+    <div class="learn-char" id="l-char">A</div>
+    <div class="learn-morse-text" id="l-morse-text">.-</div>
+    <div class="learn-morse-visual" id="l-visual"></div>
+    <button class="play-btn" onclick="learnPlay()">
+      <span>🔊</span> Play
+    </button>
+  </div>
+
+  <!-- Reference grid -->
+  <div class="learn-card" style="padding:14px">
+    <div class="ref-header">
+      <span>Tap any symbol to hear it</span>
+      <div class="filter-btns">
+        <button class="filter-btn on" id="f-all"   onclick="setFilter('all')">All</button>
+        <button class="filter-btn"   id="f-alpha" onclick="setFilter('alpha')">A–Z</button>
+        <button class="filter-btn"   id="f-num"   onclick="setFilter('num')">0–9</button>
+      </div>
+    </div>
+    <div class="ref-grid" id="ref-grid"></div>
+  </div>
+
+  <!-- Audio settings -->
+  <div class="settings-row">
+    <label>Speed:</label>
+    <select id="l-wpm" onchange="syncWpm()">
+      <option value="5">5 WPM</option>
+      <option value="10">10 WPM</option>
+      <option value="15" selected>15 WPM</option>
+      <option value="20">20 WPM</option>
+    </select>
+  </div>
+</div>
+
+<!-- ════════ DRILL PANEL ════════ -->
+<div class="panel" id="panel-drill">
+
+  <!-- Stats + ring -->
+  <div class="drill-top">
+    <div class="drill-stats">
+      <div class="stat"><div class="stat-val" id="d-score">0</div><div class="stat-lbl">Score</div></div>
+      <div class="stat"><div class="stat-val" id="d-streak">0</div><div class="stat-lbl">Streak</div></div>
+      <div class="stat"><div class="stat-val" id="d-left">—</div><div class="stat-lbl">Left</div></div>
+    </div>
+    <div class="ring">
+      <svg width="58" height="58" viewBox="0 0 58 58">
+        <circle class="ring-bg"  cx="29" cy="29" r="26"/>
+        <circle class="ring-arc" id="ring-arc" cx="29" cy="29" r="26"/>
+      </svg>
+      <div class="ring-txt" id="ring-txt">—</div>
+    </div>
+  </div>
+
+  <!-- Main card -->
+  <div class="drill-card">
+    <div class="drill-char" id="d-char">?</div>
+
+    <!-- Input display -->
+    <div class="input-display" id="d-display">
+      <span class="inp-placeholder">tap · or —</span>
+    </div>
+
+    <div class="drill-feedback" id="d-feedback">Press Start to begin</div>
+
+    <!-- Big dot / dash buttons -->
+    <div class="morse-btns" id="morse-btns">
+      <button class="morse-input-btn btn-dot" onclick="inputSymbol('.')" id="btn-dot" disabled>
+        <div class="dot-shape"></div>
+      </button>
+      <button class="morse-input-btn btn-dash" onclick="inputSymbol('-')" id="btn-dash" disabled>
+        <div class="dash-shape"></div>
+      </button>
+    </div>
+
+    <!-- Action row -->
+    <div class="action-row">
+      <button class="btn-del" id="btn-del" onclick="deleteLast()" disabled title="Backspace">⌫</button>
+      <button class="btn-skip" id="btn-skip" onclick="skipChar()" disabled>Skip</button>
+      <button class="btn-start" id="btn-start" onclick="startDrill()">Start</button>
+    </div>
+  </div>
+
+  <!-- Drill settings -->
+  <div class="settings-row">
+    <label>Length:</label>
+    <select id="d-length">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="30">30</option>
+    </select>
+    <label style="margin-left:6px">Chars:</label>
+    <select id="d-charset">
+      <option value="alpha">A–Z</option>
+      <option value="num">0–9</option>
+      <option value="all" selected>All</option>
+    </select>
+    <label style="margin-left:6px">WPM:</label>
+    <select id="d-wpm" onchange="syncWpm()">
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="15" selected>15</option>
+      <option value="20">20</option>
+    </select>
+  </div>
+</div>
+
+<!-- Session end overlay -->
+<div class="overlay" id="overlay">
+  <div class="ov-emoji">🎉</div>
+  <div class="ov-title">Session Complete</div>
+  <div class="ov-pct" id="ov-pct">0%</div>
+  <div class="ov-detail" id="ov-detail"></div>
+  <button class="btn-again" onclick="closeOverlay()">Go Again</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// MORSE DATA
+// ─────────────────────────────────────────
+const MORSE = {
+  A:'.-',  B:'-...',C:'-.-.',D:'-..',E:'.',   F:'..-.',G:'--.', H:'....',I:'..',  J:'.---',
+  K:'-.-', L:'.-..', M:'--', N:'-.', O:'---', P:'.--.', Q:'--.-',R:'.-.', S:'...', T:'-',
+  U:'..-', V:'...-', W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
+  '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.'
+};
+const ALL   = Object.keys(MORSE);
+const ALPHA = ALL.filter(c => isNaN(c));
+const NUM   = ALL.filter(c => !isNaN(c));
+
+// ─────────────────────────────────────────
+// AUDIO ENGINE
+// ─────────────────────────────────────────
+let audioCtx = null;
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // resume if suspended (mobile browsers)
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function beep(t, dur, freq = 680) {
+  const c = ctx();
+  const osc  = c.createOscillator();
+  const gain = c.createGain();
+  osc.connect(gain); gain.connect(c.destination);
+  osc.frequency.value = freq; osc.type = 'sine';
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.4, t + 0.005);
+  gain.gain.setValueAtTime(0.4, t + dur - 0.005);
+  gain.gain.linearRampToValueAtTime(0, t + dur);
+  osc.start(t); osc.stop(t + dur + 0.01);
+}
+
+let wpm = 15;
+function dotDur() { return 1.2 / wpm; }
+
+function playMorse(morse, onDone) {
+  const c = ctx();
+  let t = c.currentTime + 0.05;
+  for (const s of morse) {
+    if (s === '.')      { beep(t, dotDur()); t += dotDur() * 2; }
+    else if (s === '-') { beep(t, dotDur() * 3); t += dotDur() * 4; }
+    else if (s === ' ') { t += dotDur() * 3; }
+  }
+  if (onDone) setTimeout(onDone, (t - c.currentTime) * 1000 + 100);
+  return t;
+}
+
+function syncWpm() {
+  const lv = document.getElementById('l-wpm').value;
+  const dv = document.getElementById('d-wpm').value;
+  // whichever was last changed controls
+  wpm = parseInt(currentMode === 'learn' ? lv : dv);
+  document.getElementById('l-wpm').value = wpm;
+  document.getElementById('d-wpm').value = wpm;
+}
+
+// ─────────────────────────────────────────
+// MODE SWITCH
+// ─────────────────────────────────────────
+let currentMode = 'learn';
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('btn-learn').classList.toggle('active', m === 'learn');
+  document.getElementById('btn-drill').classList.toggle('active', m === 'drill');
+  document.getElementById('panel-learn').classList.toggle('active', m === 'learn');
+  document.getElementById('panel-drill').classList.toggle('active', m === 'drill');
+}
+
+// ─────────────────────────────────────────
+// LEARN MODE
+// ─────────────────────────────────────────
+const LEARN_CHARS = [...ALPHA, ...NUM]; // A-Z then 0-9
+let learnIdx = 0;
+let refFilter = 'all';
+
+function learnShow(idx) {
+  learnIdx = ((idx % LEARN_CHARS.length) + LEARN_CHARS.length) % LEARN_CHARS.length;
+  const ch = LEARN_CHARS[learnIdx];
+  const mc = MORSE[ch];
+  document.getElementById('l-char').textContent = ch;
+  document.getElementById('l-morse-text').textContent = mc;
+  document.getElementById('l-prog').textContent = `${learnIdx + 1} / ${LEARN_CHARS.length}`;
+  renderVisual(mc);
+}
+function learnNext() { learnShow(learnIdx + 1); }
+function learnPrev() { learnShow(learnIdx - 1); }
+function learnPlay() {
+  const ch = LEARN_CHARS[learnIdx];
+  animateVisual(MORSE[ch]);
+  playMorse(MORSE[ch]);
+}
+
+function renderVisual(morse) {
+  const el = document.getElementById('l-visual');
+  el.innerHTML = '';
+  for (const s of morse) {
+    if (s === '.') {
+      const d = document.createElement('div'); d.className = 'sym-dot'; el.appendChild(d);
+    } else if (s === '-') {
+      const d = document.createElement('div'); d.className = 'sym-dash'; el.appendChild(d);
+    }
+  }
+}
+
+function animateVisual(morse) {
+  const c = ctx();
+  let t = c.currentTime + 0.05;
+  const syms = document.getElementById('l-visual').children;
+  let si = 0;
+  // reset
+  for (const s of syms) s.classList.remove('lit');
+  for (const s of morse) {
+    const dur = s === '.' ? dotDur() : dotDur() * 3;
+    const gap = s === '.' ? dotDur() * 2 : dotDur() * 4;
+    const idx = si;
+    const delay = (t - c.currentTime) * 1000;
+    const endDelay = delay + dur * 1000;
+    setTimeout(() => { if (syms[idx]) syms[idx].classList.add('lit'); }, delay);
+    setTimeout(() => { if (syms[idx]) syms[idx].classList.remove('lit'); }, endDelay);
+    t += gap; si++;
+  }
+}
+
+function setFilter(f) {
+  refFilter = f;
+  ['all','alpha','num'].forEach(x => {
+    document.getElementById('f-'+x).classList.toggle('on', x === f);
+  });
+  renderRef();
+}
+
+function renderRef() {
+  const chars = refFilter === 'alpha' ? ALPHA : refFilter === 'num' ? NUM : ALL;
+  const grid = document.getElementById('ref-grid');
+  grid.innerHTML = '';
+  chars.forEach(ch => {
+    const cell = document.createElement('div');
+    cell.className = 'ref-cell';
+    cell.innerHTML = `<span class="rc">${ch}</span><span class="rm">${MORSE[ch]}</span>`;
+    cell.addEventListener('pointerdown', () => {
+      // navigate browser card to this char
+      learnIdx = LEARN_CHARS.indexOf(ch);
+      if (learnIdx < 0) learnIdx = 0;
+      learnShow(learnIdx);
+      // play
+      animateVisual(MORSE[ch]);
+      playMorse(MORSE[ch]);
+    });
+    grid.appendChild(cell);
+  });
+}
+
+// ─────────────────────────────────────────
+// DRILL MODE
+// ─────────────────────────────────────────
+let drillActive = false;
+let drillQueue  = [];
+let drillIdx    = 0;
+let drillInput  = '';
+let drillScore  = 0;
+let drillStreak = 0;
+let drillWaiting = false;
+let ringTotal   = 0;
+const RING_C    = 2 * Math.PI * 26; // ≈ 163
+
+function getCharSet() {
+  const v = document.getElementById('d-charset').value;
+  if (v === 'alpha') return ALPHA;
+  if (v === 'num')   return NUM;
+  return ALL;
+}
+
+function startDrill() {
+  const len = parseInt(document.getElementById('d-length').value);
+  wpm = parseInt(document.getElementById('d-wpm').value);
+  const pool = getCharSet();
+  drillQueue = Array.from({length: len}, () => pool[Math.floor(Math.random() * pool.length)]);
+  drillIdx = drillScore = drillStreak = 0;
+  ringTotal = drillQueue.length;
+  drillActive = true;
+  drillInput = '';
+  document.getElementById('btn-dot').disabled  = false;
+  document.getElementById('btn-dash').disabled = false;
+  document.getElementById('btn-del').disabled  = false;
+  document.getElementById('btn-skip').disabled = false;
+  document.getElementById('btn-start').textContent = 'Restart';
+  updateStats();
+  nextDrillChar();
+}
+
+function nextDrillChar() {
+  if (drillIdx >= drillQueue.length) { endDrill(); return; }
+  drillInput  = '';
+  drillWaiting = false;
+  const ch = drillQueue[drillIdx];
+  setDrillChar(ch, '');
+  renderInput('');
+  setFeedback('', '');
+  updateStats();
+}
+
+function setDrillChar(ch, state) {
+  const el = document.getElementById('d-char');
+  el.textContent = ch || '?';
+  el.className = 'drill-char' + (state ? ' ' + state : '');
+}
+
+function renderInput(morse) {
+  const el = document.getElementById('d-display');
+  el.innerHTML = '';
+  el.className = 'input-display';
+  if (!morse) {
+    el.innerHTML = '<span class="inp-placeholder">tap · or —</span>';
+    return;
+  }
+  for (const s of morse) {
+    const d = document.createElement('div');
+    d.className = s === '.' ? 'inp-dot' : 'inp-dash';
+    el.appendChild(d);
+  }
+}
+
+function setFeedback(msg, cls) {
+  const el = document.getElementById('d-feedback');
+  el.textContent = msg;
+  el.className = 'drill-feedback' + (cls ? ' ' + cls : '');
+}
+
+function updateStats() {
+  document.getElementById('d-score').textContent  = drillScore;
+  document.getElementById('d-streak').textContent = drillStreak;
+  const left = drillQueue.length - drillIdx;
+  document.getElementById('d-left').textContent   = drillActive ? left : '—';
+  document.getElementById('ring-txt').textContent = drillActive ? left : '—';
+  const arc = document.getElementById('ring-arc');
+  if (drillActive && ringTotal > 0) {
+    const prog = drillIdx / ringTotal;
+    arc.style.strokeDashoffset = RING_C * prog;
+    arc.style.stroke = left <= 3 ? 'var(--yellow)' : 'var(--accent)';
+  } else {
+    arc.style.strokeDashoffset = 0;
+    arc.style.stroke = 'var(--accent)';
+  }
+}
+
+function inputSymbol(s) {
+  if (!drillActive || drillWaiting) return;
+  drillInput += s;
+  renderInput(drillInput);
+  // vibrate on mobile if available
+  if (navigator.vibrate) navigator.vibrate(s === '.' ? 30 : 60);
+  checkInput();
+}
+
+function deleteLast() {
+  if (!drillActive || drillWaiting || !drillInput) return;
+  drillInput = drillInput.slice(0, -1);
+  renderInput(drillInput);
+  document.getElementById('d-display').className = 'input-display';
+}
+
+function checkInput() {
+  const expected = MORSE[drillQueue[drillIdx]];
+  if (drillInput === expected) {
+    // correct!
+    drillScore++; drillStreak++;
+    document.getElementById('d-display').className = 'input-display ok';
+    setDrillChar(drillQueue[drillIdx], 'ok');
+    setFeedback(['✓ Correct!','✓ Nice!','✓ Perfect!','✓ Yes!'][drillScore % 4], 'ok');
+    if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
+    drillWaiting = true; drillIdx++;
+    setTimeout(() => { if (drillActive) nextDrillChar(); }, 600);
+  } else if (!expected.startsWith(drillInput)) {
+    // wrong
+    drillStreak = 0;
+    document.getElementById('d-display').className = 'input-display bad';
+    setDrillChar(drillQueue[drillIdx], 'bad');
+    setFeedback(`✗ Answer: ${expected}`, 'bad');
+    if (navigator.vibrate) navigator.vibrate(200);
+    drillWaiting = true; drillIdx++;
+    setTimeout(() => { if (drillActive) nextDrillChar(); }, 900);
+  }
+  // else still valid prefix — keep waiting for more input
+}
+
+function skipChar() {
+  if (!drillActive || drillWaiting) return;
+  drillStreak = 0;
+  const expected = MORSE[drillQueue[drillIdx]];
+  setFeedback(`→ Skipped: ${expected}`, '');
+  drillWaiting = true; drillIdx++;
+  setTimeout(() => { if (drillActive) nextDrillChar(); }, 800);
+  updateStats();
+}
+
+function endDrill() {
+  drillActive = false;
+  const total = drillQueue.length;
+  const pct   = total > 0 ? Math.round(drillScore / total * 100) : 0;
+  document.getElementById('ov-pct').textContent    = pct + '%';
+  document.getElementById('ov-detail').textContent =
+    `${drillScore} / ${total} correct · best streak: ${drillStreak}`;
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('d-left').textContent = '—';
+  document.getElementById('ring-txt').textContent = '✓';
+  document.getElementById('ring-arc').style.strokeDashoffset = RING_C;
+  document.getElementById('ring-arc').style.stroke = 'var(--green)';
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+  drillActive = false;
+  document.getElementById('d-char').textContent = '?';
+  document.getElementById('d-char').className = 'drill-char';
+  renderInput('');
+  setFeedback('Press Start to begin', '');
+  document.getElementById('d-left').textContent = '—';
+  document.getElementById('ring-txt').textContent = '—';
+  document.getElementById('ring-arc').style.strokeDashoffset = 0;
+  document.getElementById('ring-arc').style.stroke = 'var(--accent)';
+}
+
+// ─────────────────────────────────────────
+// KEYBOARD SUPPORT (desktop)
+// ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (currentMode !== 'drill') return;
+  if (e.key === '.' || e.key === 'z' || e.key === 'e') inputSymbol('.');
+  if (e.key === '-' || e.key === 'x' || e.key === 't') inputSymbol('-');
+  if (e.key === 'Backspace') deleteLast();
+  if (e.key === ' ') { e.preventDefault(); skipChar(); }
+  if (e.key === 'Enter') startDrill();
+});
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+learnShow(0);
+renderRef();
+</script>
+</body>
+</html>
